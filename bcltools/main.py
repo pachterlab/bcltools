@@ -3,52 +3,65 @@
 import argparse
 import sys
 from .bcltools import (bcl2fastq, fastq2bcl)
+from .utils import (is_gz_file)
+
+from .bcl_utils import (read_bcl_header_gzip)
 
 
-def parse_b2f(args):
+def parse_read(args):
+    if args.n:
+        return read_bcl_header_gzip(args.bcl)
     return bcl2fastq(args.bcl)
 
 
-def parse_f2b(args):
+def parse_write(args):
     # TODO check if -o exists or not, make path accordingly
+    for f in args.fastqs:
+        if not is_gz_file(f):
+            raise Exception(f"{f} is not a gzipped file.")
 
-    return fastq2bcl(args.o, args.fastq)
+    return fastq2bcl(args.o, args.fastqs)
 
 
-def setup_b2f_args(parser, parent):
-    parser_b2f = parser.add_parser(
-        'b2f',
+def setup_read_args(parser, parent):
+    parser_read = parser.add_parser(
+        'read',
         description='Convert bcl files to fastq files',
         help='Convert bcl files to fastq files',
         parents=[parent]
     )
 
-    parser_b2f.add_argument(
+    parser_read.add_argument(
         '-o',
         metavar='OUT FOLDER',
         help='output folder',
         type=str,
-        required=True
+        required=False
+    )
+
+    # fix to make -n take in a number
+    parser_read.add_argument(
+        "-n", help='Read only the header', action='store_true'
     )
 
     # currently takes only one, add support for more than one
-    parser_b2f.add_argument('bcl')
+    parser_read.add_argument('bcl')
 
     # TODO add slicing functionality for the read
     # TODO add option for the type of machine
 
-    return parser_b2f
+    return parser_read
 
 
-def setup_f2b_args(parser, parent):
-    parser_f2b = parser.add_parser(
-        'f2b',
+def setup_write_args(parser, parent):
+    parser_write = parser.add_parser(
+        'write',
         description='Convert fastq files to bcl files',
         help='Convert fastq files to bcl files',
         parents=[parent]
     )
 
-    parser_f2b.add_argument(
+    parser_write.add_argument(
         '-o',
         metavar='OUT FOLDER',
         help='output folder',
@@ -56,15 +69,16 @@ def setup_f2b_args(parser, parent):
         required=True
     )
     # currently takes only one, add support for more than one
-    parser_f2b.add_argument('fastq')
+    parser_write.add_argument('fastqs', nargs='+')
     # TODO add option for the type of machine
 
-    return parser_f2b
+    return parser_write
 
 
-COMMAND_TO_FUNCTION = {'f2b': parse_f2b, 'b2f': parse_b2f}
+COMMAND_TO_FUNCTION = {'write': parse_write, 'read': parse_read}
 
 
+# Add parser to print bcl header
 def main():
     parser = argparse.ArgumentParser()
 
@@ -75,10 +89,10 @@ def main():
 
     parent = argparse.ArgumentParser(add_help=False)
 
-    parser_b2f = setup_b2f_args(subparsers, parent)
-    parser_f2b = setup_f2b_args(subparsers, parent)
+    parser_read = setup_read_args(subparsers, parent)
+    parser_write = setup_write_args(subparsers, parent)
 
-    command_to_parser = {'f2b': parser_f2b, 'b2f': parser_b2f}
+    command_to_parser = {'write': parser_write, 'read': parser_read}
 
     # Show help when no arguments are given
     if len(sys.argv) == 1:
