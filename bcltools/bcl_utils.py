@@ -60,6 +60,38 @@ def read_bcl(bcl):
     header_fmt = "<i"
     seq_fmt = "<B"
 
+    with open(bcl, "rb") as f:
+        up = struct.unpack(header_fmt, f.read(4))
+        sys.stdout.write(f'{up}\n')
+        itr = struct.iter_unpack(seq_fmt, f.read())
+        for idx, i in enumerate(itr):
+            base = num2base.get(3 & i[0], 0)
+            num = i[0] >> 2
+            qual = num2qual(num)
+            sys.stdout.write(f'{get_bin(i[0], 8)}\t{base}\t{qual}\n')
+
+
+def read_bcl_gzip(bcl):
+    """
+    # Byte specification of *.bcl
+    # Note: N is the cluster index
+    #
+    # Bytes         | Description              | Data type
+    # -----------------------------------------------------
+    # Bytes 0–3     | Number N of cluster      | Unsigned 32bits little endian integer
+    #
+    # Bytes 4–(N+3) | Bits 0-1 are the bases,  | Unsigned 8bits integer
+    #               | respectively [A, C, G, T]
+    #               | for [0, 1, 2, 3]: bits
+    #               | 2-7 are shifted by two
+    #               | bits and contain the
+    #               | quality score. All bits
+    #               | ‘0’ in a byte is reserved
+    #               | for no-call.
+    """
+    header_fmt = "<i"
+    seq_fmt = "<B"
+
     with gzip.open(bcl, "rb") as f:
         up = struct.unpack(header_fmt, f.read(4))
         sys.stdout.write(f'{up}\n')
@@ -73,6 +105,21 @@ def read_bcl(bcl):
 
 # if bcl file is bgzf then you have to use this one
 def read_bcl_header(bcl):
+    """
+    # Note: N is the cluster index
+    Bytes     | Description         | Data type
+    Bytes 0–3 | Number N of cluster | Unsigned 32bits little endian integer
+    """
+    header_fmt = "<i"
+
+    with open(bcl, "rb") as f:
+        up = struct.unpack(header_fmt, f.read(4))
+        sys.stdout.write(f'{up[0]}\n')
+        return up
+
+
+# if bcl file is bgzf then you have to use this one
+def read_bcl_header_gzip(bcl):
     """
     # Note: N is the cluster index
     Bytes     | Description         | Data type

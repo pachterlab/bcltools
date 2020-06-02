@@ -4,13 +4,22 @@ import argparse
 import sys
 from .bcltools import (bcl2fastq, fastq2bcl)
 from .utils import (is_gz_file)
-
-from .bcl_utils import (read_bcl_header)
+from .config import MACHINE_TYPES, GZIPPED
+from .bcl_utils import (
+    read_bcl_header, read_bcl_header_gzip, read_bcl_gzip, read_bcl
+)
 
 
 def parse_read(args):
-    if args.n:
-        return read_bcl_header(args.bcl)
+    gzipped = GZIPPED.get(args.x, True)
+
+    if args.head:
+        return read_bcl_header_gzip(args.bcl
+                                    ) if gzipped else read_bcl_header(args.bcl)
+
+    elif not args.head:
+        return read_bcl_gzip(args.bcl) if gzipped else read_bcl(args.bcl)
+
     return bcl2fastq(args.bcl)
 
 
@@ -39,9 +48,20 @@ def setup_read_args(parser, parent):
         required=False
     )
 
+    parser_read.add_argument(
+        '-x',
+        help="Type of machine",
+        choices=MACHINE_TYPES,
+        type=str.lower,
+        required=True
+    )
+
     # fix to make -n take in a number
     parser_read.add_argument(
-        "-n", help='Read only the header', action='store_true'
+        "-head",
+        help="Read the header of a bcl file",
+        action='store_true',
+        required=False
     )
 
     # currently takes only one, add support for more than one

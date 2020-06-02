@@ -2,7 +2,7 @@ import gzip
 import os
 
 from .utils import prepend_zeros_to_number
-from .fastq_utils import (get_n_reads, get_read_len, parse_fastq_header)
+from .fastq_utils import (get_n_reads, get_read_len)
 from .bcl_utils import (write_bcl_header, write_bcl_record, read_bcl)
 
 
@@ -35,10 +35,10 @@ def write_seqs_quals(fastq, bcls):
     with gzip.open(fastq, 'rb') as f:
         for lidx, l in enumerate(f, 0):
             if lidx % 4 == 0:
-                h = parse_fastq_header(l.strip().decode())
+                # h = parse_fastq_header(l.strip().decode())
 
-                x = h['x']
-                y = h['y']
+                # x = h['x']
+                # y = h['y']
 
                 pos_bool = True
 
@@ -55,12 +55,12 @@ def write_seqs_quals(fastq, bcls):
                 qual_bool = False
                 pos_bool = False
 
-                print(x, y)
-                print(seq)
-                print(qual)
+                # print(x, y)
+                # print(seq)
+                # print(qual)
 
-                # for idx, (b, q) in enumerate(zip(seq, qual)):
-                #     write_bcl_record(b, q, bcls[idx])
+                for idx, (b, q) in enumerate(zip(seq, qual)):
+                    write_bcl_record(b, q, bcls[idx])
 
     return
 
