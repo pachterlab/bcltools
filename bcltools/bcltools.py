@@ -3,7 +3,7 @@ import os
 
 from .utils import prepend_zeros_to_number
 from .fastq_utils import (get_n_reads, get_read_len, parse_fastq_header)
-from .bcl_utils import (write_bcl_header, write_bcl_record, read_bcl_gzip)
+from .bcl_utils import (write_bcl_header, write_bcl_record, read_bcl)
 
 
 def make_bcl_files(path, read_len, n_reads):
@@ -129,6 +129,6 @@ def fastq2bcl(path, fastqs):
 
 
 def bcl2fastq(bcl, header=False):
-    read_bcl_gzip(bcl)
+    read_bcl(bcl)
 
     return

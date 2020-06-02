@@ -3,7 +3,7 @@ import sys
 import gzip
 import os
 
-from .utils import (prepend_zeros_to_number)
+from .utils import (prepend_zeros_to_number, get_bin, num2qual, qual2num)
 
 
 # Specific to Nextseq
@@ -27,7 +27,7 @@ def write_bcl_record(base, qual, bcl):
 
     r = 0
     if base != "N":
-        q = (ord(qual) - 33) << 2
+        q = qual2num(qual) << 2
         b = base2num[base]
         r = q | b
     record = struct.pack(seq_fmt, r)
@@ -60,31 +60,24 @@ def read_bcl(bcl):
     header_fmt = "<i"
     seq_fmt = "<B"
 
-    with open(bcl, "br") as f:
+    with gzip.open(bcl, "rb") as f:
         up = struct.unpack(header_fmt, f.read(4))
         sys.stdout.write(f'{up}\n')
         itr = struct.iter_unpack(seq_fmt, f.read())
         for idx, i in enumerate(itr):
             base = num2base.get(3 & i[0], 0)
-            qual = i[0] >> 2
-            sys.stdout.write(f'{bin(i[0])}\t{base}\t{qual}\n')
+            num = i[0] >> 2
+            qual = num2qual(num)
+            sys.stdout.write(f'{get_bin(i[0], 8)}\t{base}\t{qual}\n')
 
 
+# if bcl file is bgzf then you have to use this one
 def read_bcl_header(bcl):
     """
     # Note: N is the cluster index
     Bytes     | Description         | Data type
     Bytes 0–3 | Number N of cluster | Unsigned 32bits little endian integer
     """
-    header_fmt = "<i"
-
-    with open(bcl, "rb") as f:
-        up = struct.unpack(header_fmt, f.read(4))
-        return up
-
-
-# if bcl file is bgzf then you have to use this one
-def read_bcl_header_gzip(bcl):
     header_fmt = "<i"
 
     with gzip.open(bcl, "rb") as f:

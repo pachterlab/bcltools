@@ -5,12 +5,12 @@ import sys
 from .bcltools import (bcl2fastq, fastq2bcl)
 from .utils import (is_gz_file)
 
-from .bcl_utils import (read_bcl_header_gzip)
+from .bcl_utils import (read_bcl_header)
 
 
 def parse_read(args):
     if args.n:
-        return read_bcl_header_gzip(args.bcl)
+        return read_bcl_header(args.bcl)
     return bcl2fastq(args.bcl)
 
 
