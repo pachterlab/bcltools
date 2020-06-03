@@ -2,25 +2,23 @@
 
 import argparse
 import sys
-from .bcltools import (bcl2fastq, fastq2bcl)
-from .utils import (is_gz_file)
-from .config import MACHINE_TYPES, GZIPPED
-from .bcl_utils import (
-    read_bcl_header, read_bcl_header_gzip, read_bcl_gzip, read_bcl
-)
+from .bcltools import (fastq2bcl)
+from .utils import (is_gz_file, clean_pipe)
+from .config import MACHINE_TYPES
+
+from .BCLfile import BCLFile
 
 
 def parse_read(args):
-    gzipped = GZIPPED.get(args.x, True)
+    bcl = BCLFile(args.bcl, args.x)
 
     if args.head:
-        return read_bcl_header_gzip(args.bcl
-                                    ) if gzipped else read_bcl_header(args.bcl)
+        return clean_pipe(bcl.read_header)
 
     elif not args.head:
-        return read_bcl_gzip(args.bcl) if gzipped else read_bcl(args.bcl)
+        return clean_pipe(bcl.read_record)
 
-    return bcl2fastq(args.bcl)
+    return
 
 
 def parse_write(args):
@@ -37,18 +35,13 @@ def setup_read_args(parser, parent):
         'read',
         description='Convert bcl files to fastq files',
         help='Convert bcl files to fastq files',
-        parents=[parent]
+        parents=[parent],
+        add_help=False
     )
 
-    parser_read.add_argument(
-        '-o',
-        metavar='OUT FOLDER',
-        help='output folder',
-        type=str,
-        required=False
-    )
+    required_read = parser_read.add_argument_group('required arguments')
 
-    parser_read.add_argument(
+    required_read.add_argument(
         '-x',
         help="Type of machine",
         choices=MACHINE_TYPES,
@@ -56,12 +49,27 @@ def setup_read_args(parser, parent):
         required=True
     )
 
+    optional_read = parser_read.add_argument_group('optional arguments')
+
+    optional_read.add_argument(
+        '-o',
+        metavar='OUT FOLDER',
+        help='output folder',
+        type=str,
+        required=False
+    )
+
     # fix to make -n take in a number
-    parser_read.add_argument(
-        "-head",
+    optional_read.add_argument(
+        "-hd",
+        "--head",
         help="Read the header of a bcl file",
         action='store_true',
         required=False
+    )
+
+    optional_read.add_argument(
+        "-h", "--help", action="help", help="show this help message and exit"
     )
 
     # currently takes only one, add support for more than one

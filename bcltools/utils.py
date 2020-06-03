@@ -1,4 +1,6 @@
 import binascii
+import os
+import sys
 
 
 def is_gz_file(filepath):
@@ -37,3 +39,14 @@ def qual2num(qual):
 def num2qual(num):
     qual = chr(num + 33)
     return qual
+
+
+def clean_pipe(f, **args):
+    try:
+        f(**args)
+    except BrokenPipeError:
+        # Python flushes standard streams on exit; redirect remaining output
+        # to devnull to avoid another BrokenPipeError at shutdown
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(1)  # Python exits with error code 1 on EPIPE
