@@ -50,3 +50,8 @@ def clean_pipe(f, **args):
         devnull = os.open(os.devnull, os.O_WRONLY)
         os.dup2(devnull, sys.stdout.fileno())
         sys.exit(1)  # Python exits with error code 1 on EPIPE
+
+
+# def touch(file):
+#     if not os.path.exists(file):
+#         with open(file, 'w'): pass
