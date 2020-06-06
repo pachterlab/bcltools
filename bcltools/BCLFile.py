@@ -1,7 +1,7 @@
 from .utils import (num2qual, qual2num)
 import struct
 import sys
-import gzip
+# import gzip
 
 from .config import GZIPPED
 
@@ -22,13 +22,14 @@ class BCLFile(object):
         self.file = None
 
     def open(self, mode):
+        # TODO gzip not working
         # mode for read = 'rb'
         # mode for write append = 'ab'
         # mode for seek write = 'r+b'
         if not self.isopen():
             self.file = open(
                 self.path, mode
-            ) if not self.gzipped else gzip.open(self.path, mode)
+            )  # if not self.gzipped else gzip.open(self.path, mode)
         return
 
     def close(self):
@@ -107,7 +108,7 @@ class BCLFile(object):
         header = struct.pack(self.header_fmt, n_reads)
 
         self.open('r+b')
-        self.file.seek(0)
+        # self.file.seek(0)
         self.file.write(header)
         self.file.close()
 
