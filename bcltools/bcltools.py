@@ -17,6 +17,7 @@ def bclwrite(outfile, technology, file):
     out_bcl = BCLFile(outfile, technology)
     out_bcl.write_header(0, close=False)
     out_bcl.write_records(file)
+    file.close()
 
     return
 
@@ -47,6 +48,14 @@ def locsread(locs, head=False, n_lines=-1):
         locs_file.read_header()
     elif not head:
         locs_file.read_record(n_lines)
+
+
+def locswrite(outfile, file):
+    locs = LOCSFile(outfile)
+    locs.write_header(0, close=False)
+    locs.write_records(file)
+    file.close()
+    return
 
 
 def bclconvert(n_lanes, machine_type, base_path, fastqs):

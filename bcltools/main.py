@@ -4,9 +4,11 @@ import argparse
 import sys
 import logging
 
-from .bcltools import (bclconvert, bclread, bclwrite, bciread, locsread)
+from .bcltools import (
+    bclconvert, bclread, bclwrite, bciread, locsread, locswrite
+)
 from .type_checkers import (check_gz_file, check_lane_lim, check_positive)
-from .config import (MACHINE_TYPES, BC_TYPES)
+from .config import (MACHINE_TYPES, FILE_TYPES)
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +33,10 @@ def parse_write(args):
             if not args.o:
                 sys.exit('Please provide an output file or pipe')
             else:
-                bclwrite(args.o, args.x, args.file)
-                args.file.close()
+                if args.f == 'bcl':
+                    bclwrite(args.o, args.x, args.file)
+                elif args.f == 'locs':
+                    locswrite(args.o, args.file)
 
 
 def parse_convert(args):
@@ -46,8 +50,8 @@ def parse_convert(args):
 def setup_read_args(parser, parent):
     parser_read = parser.add_parser(
         'read',
-        description='Convert bcl files to fastq files',
-        help='Convert bcl files to fastq files',
+        description='Read binary file',
+        help='Read binary file',
         parents=[parent],
         add_help=False
     )
@@ -66,8 +70,8 @@ def setup_read_args(parser, parent):
 
     optional_read.add_argument(
         '-f',
-        help='type of bc* file (default: bcl)',
-        choices=BC_TYPES,
+        help='type of file (default: bcl)',
+        choices=FILE_TYPES,
         type=str,
         required=False,
         default='bcl'
@@ -134,6 +138,15 @@ def setup_write_args(parser, parent):
         help='output folder',
         type=str,
         required=True
+    )
+
+    optional_write.add_argument(
+        '-f',
+        help='type of file (default: bcl)',
+        choices=FILE_TYPES,
+        type=str,
+        required=False,
+        default='bcl'
     )
 
     optional_write.add_argument(

@@ -20,6 +20,8 @@ class LOCSFile(object):
 
         self.header_fmt = '<IfL'
         self.header_len = 12
+        self.version_num = 1
+        self.magic_num = 1.0
 
         self.record_fmt = '<ff'
         self.record_len = 8
@@ -66,7 +68,44 @@ class LOCSFile(object):
 
         self.close()
 
-    # def write_header(self, n_reads):
-    #     pass
-    # def write_record(self, x, y):
-    #     pass
+    def write_header(self, n_reads, close=True):
+        self.open('wb')
+
+        header = struct.pack(
+            self.header_fmt, self.version_num, self.magic_num, n_reads
+        )
+
+        self.file.write(header)
+        if close:
+            self.close()
+
+    def change_header(self, n_reads):
+        self.open('r+b')
+
+        header = struct.pack(
+            self.header_fmt, self.version_num, self.magic_num, n_reads
+        )
+
+        self.file.seek(0)
+        self.file.write(header)
+        self.close()
+
+    def write_record(self, x, y, close=False):
+        self.open('ab')
+
+        record = struct.pack(self.record_fmt, x, y)
+        self.file.write(record)
+
+        if close:
+            self.close()
+
+    def write_records(self, infile):
+        for idx, line in enumerate(infile, 1):
+            x, y = map(float, line.strip().split())
+
+            self.write_record(x, y, close=False)
+
+        self.close()
+
+        n_reads = idx
+        self.change_header(n_reads)
