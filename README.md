@@ -10,23 +10,30 @@ $ cd bcltools
 $ pip install .
 ```
 
-## Usage
-### Reading BCL files
+## Usage - Reading
+### BCL files
 ```
 $ bcltools read -x nextseq --head examples/bcl.bgzf # read header only
 $ bcltools read -x nextseq examples/bcl.bgzf        # read all entries
 $ bcltools read -x nextseq -n 15 examples/bcl.bgzf  # read 15 entries
 ```
 
-### Writing BCL files
+### LOCS files
+```
+$ bcltools read -x nextseq --head examples/locs.locs # read header only
+$ bcltools read -x nextseq examples/locs.locs        # read all entries
+$ bcltools read -x nextseq -n 15 examples/locs.locs  # read 15 entries
+```
+
+## Usage - Writing
+### BCL files
 ```
 $ echo "A\t!" | bcltools write -x miseq -o ./out.bcl - # write basepair and Qscore to bclfile
 $ bcltools read -x miseq out.bcl                       # check that it worked
 ```
 
-### Reading LOCS files
+### LOCS files
 ```
-$ bcltools read -x nextseq --head examples/locs.locs # read header only
-$ bcltools read -x nextseq examples/locs.locs        # read all entries
-$ bcltools read -x nextseq -n 15 examples/locs.locs  # read 15 entries
+$ echo "12223.44\t2.44334" | bcltools write -x miseq -f locs -o locs.locs - # write an x y value
+$ bcltools read -x miseq -f locs locs.locs                                  # check that it worked
 ```
