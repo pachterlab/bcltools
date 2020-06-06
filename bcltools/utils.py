@@ -1,11 +1,6 @@
-import binascii
 import os
 import sys
-
-
-def is_gz_file(filepath):
-    with open(filepath, 'rb') as test_f:
-        return binascii.hexlify(test_f.read(2)) == b'1f8b'
+import struct
 
 
 def prepend_zeros_to_number(len_name, number):
@@ -52,6 +47,44 @@ def clean_pipe(f, **args):
         sys.exit(1)  # Python exits with error code 1 on EPIPE
 
 
+def parse_fastq_header(line):
+    h = {}
+    # @<instrument>:<run number>:<flowcell ID>:<lane>:<tile>:<x-pos>:<y-pos> \
+    # <read>:<is filtered>:<control number>:<sample number>
+    first, second = line.split(" ")
+    first = first.split(':')
+    second = second.split(':')
+
+    h['instrument'] = first[0][1:]
+    h['run_number'] = int(first[1])
+    h['flowcell_ID'] = first[2]
+    h['lane'] = int(first[3])
+    # composed of 5 numbers
+    # surface {1, 2}, swath {1, 2, 3}, camera {1, 2, 3, 4, 5, 6}, tile {01-12}
+    h['tile'] = int(first[4])
+    h['x'] = int(first[5])
+    h['y'] = int(first[6])
+
+    h['read'] = int(second[0])
+    h['is_filtered'] = True if second[1] == 'Y' else False
+    h['control_number'] = int(second[2])
+    h['sample_number'] = int(second[3])
+
+    return h
+
+
 # def touch(file):
 #     if not os.path.exists(file):
 #         with open(file, 'w'): pass
+
+
+def binread(file, header_fmt, header_len, record_fmt):
+    with open(file, 'rb') as f:
+
+        head = struct.unpack(header_fmt, f.read(header_len))
+        sys.stdout.write(f'{head}\n')
+
+        itr = struct.iter_unpack(record_fmt, f.read())
+
+        for idx, i in enumerate(itr):
+            sys.stdout.write(f'{i[0]}\n')

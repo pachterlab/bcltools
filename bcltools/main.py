@@ -2,23 +2,23 @@
 
 import argparse
 import sys
-# from .bcltools import (fastq2bcl)
-from .utils import (clean_pipe)
-from .config import MACHINE_TYPES
+import logging
 
-from .BCLFile import BCLFile
-# from .BCLFolderStructure import BCLFolderStructure
+from .bcltools import (bclconvert, bclread, bclwrite, bciread, locsread)
+from .type_checkers import (check_gz_file, check_lane_lim, check_positive)
+from .config import (MACHINE_TYPES, BC_TYPES)
+
+logger = logging.getLogger(__name__)
 
 
 def parse_read(args):
-    bcl = BCLFile(args.bcl, args.x)
 
-    if args.head:
-        return clean_pipe(bcl.read_header)
-
-    elif not args.head:
-        return clean_pipe(bcl.read_record)
-
+    if args.f == 'bcl':
+        bclread(args.x, args.file, args.head, args.n)
+    elif args.f == 'bci':
+        bciread(args.file)
+    elif args.f == 'locs':
+        locsread(args.file, args.head, args.n)
     return
 
 
@@ -31,21 +31,16 @@ def parse_write(args):
             if not args.o:
                 sys.exit('Please provide an output file or pipe')
             else:
-                # overwrite the file
-                out_bcl = BCLFile(args.o, args.x)
-                out_bcl.write_header(0, close=False)
-                out_bcl.write_records(args.file)
+                bclwrite(args.o, args.x, args.file)
                 args.file.close()
 
 
-# def parse_convert(args):
-#     # folder_stucture = BCLFolderStructure()
-#     # TODO check if -o exists or not, make path accordingly
-#     for f in args.fastqs:
-#         if not is_gz_file(f):
-#             raise Exception(f"{f} is not a gzipped file.")
-#
-#     return fastq2bcl(args.o, args.fastqs)
+def parse_convert(args):
+    # TODO check if -o exists or not, make path accordingly
+
+    bclconvert(args.n, args.x, args.o, args.fastqs)
+
+    return
 
 
 def setup_read_args(parser, parent):
@@ -70,6 +65,15 @@ def setup_read_args(parser, parent):
     optional_read = parser_read.add_argument_group('optional arguments')
 
     optional_read.add_argument(
+        '-f',
+        help='type of bc* file (default: bcl)',
+        choices=BC_TYPES,
+        type=str,
+        required=False,
+        default='bcl'
+    )
+
+    optional_read.add_argument(
         '-o', metavar='OUT FILE', help='output file', type=str, required=False
     )
 
@@ -83,11 +87,19 @@ def setup_read_args(parser, parent):
     )
 
     optional_read.add_argument(
+        '-n', help='Number of records to read', type=check_positive, default=-1
+    )
+
+    optional_read.add_argument(
         "-h", "--help", action="help", help="show this help message and exit"
     )
 
+    optional_read.add_argument(
+        '--verbose', help='Print debugging information', action='store_true'
+    )
+
     # currently takes only one, add support for more than one
-    parser_read.add_argument('bcl')
+    parser_read.add_argument('file')
 
     # TODO add slicing functionality for the read
     # TODO add option for the type of machine
@@ -131,17 +143,71 @@ def setup_write_args(parser, parent):
     optional_write.add_argument(
         "-h", "--help", action="help", help="show this help message and exit"
     )
+
+    optional_write.add_argument(
+        '--verbose', help='Print debugging information', action='store_true'
+    )
+
     # currently takes only one, add support for more than one
-    # parser_write.add_argument('file', nargs='+')
     parser_write.add_argument(
         'file', nargs='?', type=argparse.FileType('r'), default=sys.stdin
     )
-    # TODO add option for the type of machine
 
     return parser_write
 
 
-COMMAND_TO_FUNCTION = {'write': parse_write, 'read': parse_read}
+def setup_convert_args(parser, parent):
+    parser_convert = parser.add_parser(
+        'convert',
+        description='Convert fastq files to bcl files',
+        help='Convert fastq files to bcl files',
+        parents=[parent],
+        add_help=False
+    )
+
+    required_convert = parser_convert.add_argument_group('required arguments')
+
+    required_convert.add_argument(
+        '-x',
+        help="Type of machine",
+        choices=MACHINE_TYPES,
+        type=str.lower,
+        required=True
+    )
+
+    required_convert.add_argument(
+        '-n', help="Number of lanes", type=check_lane_lim, required=True
+    )
+
+    required_convert.add_argument(
+        '-o',
+        metavar='OUT FOLDER',
+        help='output folder',
+        type=str,
+        required=True
+    )
+
+    optional_convert = parser_convert.add_argument_group('optional arguments')
+
+    optional_convert.add_argument(
+        "-h", "--help", action="help", help="show this help message and exit"
+    )
+
+    optional_convert.add_argument(
+        '--verbose', help='Print debugging information', action='store_true'
+    )
+
+    # currently only supports from fastqs to bcls
+    parser_convert.add_argument('fastqs', nargs='+', type=check_gz_file)
+
+    return parser_convert
+
+
+COMMAND_TO_FUNCTION = {
+    'write': parse_write,
+    'read': parse_read,
+    'convert': parse_convert
+}
 
 
 # Add parser to print bcl header
@@ -157,8 +223,13 @@ def main():
 
     parser_read = setup_read_args(subparsers, parent)
     parser_write = setup_write_args(subparsers, parent)
+    parser_convert = setup_convert_args(subparsers, parent)
 
-    command_to_parser = {'write': parser_write, 'read': parser_read}
+    command_to_parser = {
+        'write': parser_write,
+        'read': parser_read,
+        'convert': parser_convert
+    }
 
     # Show help when no arguments are given
     if len(sys.argv) == 1:
@@ -172,6 +243,16 @@ def main():
         sys.exit(1)
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+        format='[%(asctime)s] %(levelname)7s %(message)s',
+        level=logging.DEBUG if args.verbose else logging.INFO,
+    )
+    logging.getLogger('chardet.charsetprober').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+
+    logger.debug('Printing verbose output')
+    logger.debug(args)
 
     COMMAND_TO_FUNCTION[args.command](args)
 

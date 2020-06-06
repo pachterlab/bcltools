@@ -1,5 +1,133 @@
-# import gzip
-# import os
+from .BCLFolderStructure import BCLFolderStructure
+from .FASTQFile import FASTQFile
+from .BCLFile import BCLFile
+from .LOCSFile import LOCSFile
+from .utils import binread
+
+import logging
+import gzip
+from contextlib import ExitStack
+
+from .utils import clean_pipe
+
+logger = logging.getLogger(__name__)
+
+
+def bclwrite(outfile, technology, file):
+    out_bcl = BCLFile(outfile, technology)
+    out_bcl.write_header(0, close=False)
+    out_bcl.write_records(file)
+
+    return
+
+
+def bclread(technology, bcl, head=False, n_lines=-1):
+    bcl = BCLFile(bcl, technology)
+
+    if head:
+        return clean_pipe(bcl.read_header)
+
+    elif not head:
+        return clean_pipe(bcl.read_record, n_lines=n_lines)
+    return
+
+
+def bciread(bci):
+    header_fmt = '<I'
+    header_len = 4  # bytes
+
+    record_fmt = '<I'
+    binread(bci, header_fmt, header_len, record_fmt)
+
+
+def locsread(locs, head=False, n_lines=-1):
+    locs_file = LOCSFile(locs)
+
+    if head:
+        locs_file.read_header()
+    elif not head:
+        locs_file.read_record(n_lines)
+
+
+def bclconvert(n_lanes, machine_type, base_path, fastqs):
+
+    fastq_objects = [FASTQFile(path) for path in fastqs]
+    logger.info(f"Number of FASTQ Files {len(fastq_objects)}")
+
+    logger.info("Counting number of cycles")
+    n_cycles = sum([fastq.read_len() for fastq in fastq_objects])
+
+    logger.info("Counting number of reads")
+    n_reads = fastq_objects[0].n_reads()
+
+    folder_structure = BCLFolderStructure(
+        n_lanes, n_cycles, n_reads, machine_type, base_path
+    )
+
+    # initialize the BaseCalls/L00X folders
+    logger.info("Initializing BCL Folder structure")
+    lanes = folder_structure.make_base_calls_lane_folders()
+
+    # initialize the bcl files
+    logger.info("Initializing BCL files")
+    for lane in lanes:
+        folder_structure.initialize_bcl_files(lane)
+
+    # Do the transpose
+
+    # open all files
+
+    logger.info('Writing records to BCL files')
+
+    seq_bool = False
+    qual_bool = False
+    coord_bool = False
+    with ExitStack() as stack:
+        infiles = [
+            stack.enter_context(gzip.open(fastq.path))
+            for fastq in fastq_objects
+        ]
+
+        for idx, lines in enumerate(zip(*infiles), 0):
+            if idx % 4 == 0:
+                # line = lines[0]
+                # should check that the headers are consistent
+                # h = parse_fastq_header(line.strip().decode())
+
+                # x = h['x']
+                # y = h['y']
+
+                coord_bool = True
+
+            elif (idx - 1) % 4 == 0:
+                seqs = [seq.strip().decode() for seq in lines]
+                seq_bool = True
+
+            elif (idx + 1) % 4 == 0:
+                quals = [qual.strip().decode() for qual in lines]
+                qual_bool = True
+
+            if seq_bool and qual_bool and coord_bool:
+                seq_bool = False
+                qual_bool = False
+                coord_bool = False
+
+                # print(x, y)
+                # print(seqs)
+                # print(quals)
+
+                seq = "".join(seqs)
+                qual = "".join(quals)
+
+                for idx, (b, q) in enumerate(zip(seq, qual)):
+                    folder_structure.bcl_files['L001'][idx].write_record(b, q)
+
+    # write the headers ie number of cycles
+
+    # write the sequences
+
+    return
+
 
 # from .utils import prepend_zeros_to_number
 # from .fastq_utils import (get_n_reads, get_read_len)

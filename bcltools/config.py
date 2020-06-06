@@ -4,4 +4,6 @@ MACHINE_TYPES = (
     'novaseq',
 )
 
+BC_TYPES = ('bcl', 'bci', 'locs')
+
 GZIPPED = {'nextseq': True, 'miseq': False, 'novaseq': True}

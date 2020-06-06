@@ -21,7 +21,7 @@ class BCLFile(object):
 
         self.file = None
 
-    def open_bcl(self, mode):
+    def open(self, mode):
         # mode for read = 'rb'
         # mode for write append = 'ab'
         # mode for seek write = 'r+b'
@@ -31,7 +31,7 @@ class BCLFile(object):
             ) if not self.gzipped else gzip.open(self.path, mode)
         return
 
-    def close_bcl(self):
+    def close(self):
         return self.file.close()
 
     def isopen(self):
@@ -47,15 +47,16 @@ class BCLFile(object):
         Bytes 0–3 | Number N of cluster | Unsigned 32bits little endian integer
         """
 
-        self.open_bcl('rb')
+        self.open('rb')
 
         up = struct.unpack(self.header_fmt, self.file.read(self.header_len))
         sys.stdout.write(f'{up[0]}\n')
 
-        self.close_bcl()
+        self.close()
+
         return up
 
-    def read_record(self):
+    def read_record(self, n_lines=-1, skip_header=True):
         """
         # Byte specification of *.bcl
         # Note: N is the cluster index
@@ -74,35 +75,38 @@ class BCLFile(object):
         #               | for no-call.
         """
 
-        self.open_bcl('rb')
+        self.open('rb')
 
-        up = struct.unpack(self.header_fmt, self.file.read(self.header_len))
-        sys.stdout.write(f'{up}\n')
+        if skip_header:
+            self.file.seek(self.header_len)
+        else:
+            self.read_header()
+
         itr = struct.iter_unpack(self.record_fmt, self.file.read())
         # if i[0] is equal to zero then its a no call 'N'
         for idx, i in enumerate(itr):
+            if idx == n_lines:
+                break
             base = num2base.get(3 & i[0], 0)
             num = i[0] >> 2
             qual = num2qual(num)
             sys.stdout.write(f'{base}\t{qual}\n')
 
-        self.close_bcl()
+        self.close()
 
-    # Specific to Nextseq
-    # seek to the beginning and write
     def write_header(self, n_reads, close=True):
         header = struct.pack(self.header_fmt, n_reads)
 
-        self.open_bcl('wb')
+        self.open('wb')
         self.file.write(header)
 
         if close:
-            self.close_bcl()
+            self.close()
 
     def change_header(self, n_reads):
         header = struct.pack(self.header_fmt, n_reads)
 
-        self.open_bcl('r+b')
+        self.open('r+b')
         self.file.seek(0)
         self.file.write(header)
         self.file.close()
@@ -119,11 +123,11 @@ class BCLFile(object):
             r = q | b
         record = struct.pack(self.record_fmt, r)
 
-        self.open_bcl('ab')
+        self.open('ab')
         self.file.write(record)
 
         if close:
-            self.close_bcl()
+            self.close()
 
     def write_records(self, infile):
 
@@ -131,7 +135,7 @@ class BCLFile(object):
             base, qual = line.strip().split()
             self.write_record(base, qual, close=False)
 
-        self.close_bcl()
+        self.close()
 
         n_reads = idx
         self.change_header(n_reads)
