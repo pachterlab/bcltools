@@ -10,6 +10,7 @@ $ cd bcltools
 $ pip install .
 ```
 
+## Usage
 ### Reading BCL files
 ```
 $ bcltools read -x nextseq --head examples/bcl.bgzf # read header only
@@ -17,7 +18,7 @@ $ bcltools read -x nextseq examples/bcl.bgzf        # read all entries
 $ bcltools read -x nextseq -n 15 examples/bcl.bgzf  # read 15 entries
 ```
 
-## Writing BCL files
+### Writing BCL files
 ```
 $ echo "A\t!" | bcltools write -x miseq -o ./out.bcl - # write basepair and Qscore to bclfile
 $ bcltools read -x miseq out.bcl                       # check that it worked
