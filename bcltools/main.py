@@ -7,7 +7,7 @@ import logging
 from .bcltools import (
     bclconvert, bclread, bclwrite, bciread, locsread, locswrite
 )
-from .type_checkers import (check_gz_file, check_lane_lim, check_positive)
+from .type_checkers import (check_gz_file, check_lane_lim)
 from .config import (MACHINE_TYPES, FILE_TYPES)
 
 logger = logging.getLogger(__name__)
@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 def parse_read(args):
 
     if args.f == 'bcl':
-        bclread(args.file, args.head, args.n)
+        bclread(args.file, args.head)
     elif args.f == 'bci':
         bciread(args.file)
     elif args.f == 'locs':
-        locsread(args.file, args.head, args.n)
+        locsread(args.file, args.head)
     return
 
 
@@ -88,10 +88,6 @@ def setup_read_args(parser, parent):
         help="Read the header of a bcl file",
         action='store_true',
         required=False
-    )
-
-    optional_read.add_argument(
-        '-n', help='Number of records to read', type=check_positive, default=-1
     )
 
     optional_read.add_argument(

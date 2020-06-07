@@ -27,7 +27,7 @@ def bclwrite(bcl, infile):
     return
 
 
-def bclread(bcl, head=False, n_lines=-1):
+def bclread(bcl, head=False):
     bcl = BCLFile(bcl)
 
     if head:
@@ -36,7 +36,7 @@ def bclread(bcl, head=False, n_lines=-1):
         return clean_pipe(bcl.read_record_bcl)
 
 
-def locsread(locs, head=False, n_lines=-1):
+def locsread(locs, head=False):
     locs_file = LOCSFile(locs)
 
     if head:
