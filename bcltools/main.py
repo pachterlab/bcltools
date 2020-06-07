@@ -5,7 +5,8 @@ import sys
 import logging
 
 from .bcltools import (
-    bclconvert, bclread, bclwrite, bciread, locsread, locswrite
+    bclconvert, bclread, bclwrite, bciread, locsread, locswrite, filterread,
+    filterwrite
 )
 from .type_checkers import (check_gz_file, check_lane_lim)
 from .config import (MACHINE_TYPES, FILE_TYPES)
@@ -21,6 +22,8 @@ def parse_read(args):
         bciread(args.file)
     elif args.f == 'locs':
         locsread(args.file, args.head)
+    elif args.f == 'filter':
+        filterread(args.file, args.head)
     return
 
 
@@ -37,6 +40,8 @@ def parse_write(args):
                     bclwrite(args.o, args.file)
                 elif args.f == 'locs':
                     locswrite(args.o, args.file)
+                elif args.f == 'filter':
+                    filterwrite(args.o, args.file)
 
 
 def parse_convert(args):

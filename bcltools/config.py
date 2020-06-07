@@ -4,7 +4,7 @@ MACHINE_TYPES = (
     'novaseq',
 )
 
-FILE_TYPES = ('bcl', 'bci', 'locs')
+FILE_TYPES = ('bcl', 'bci', 'locs', 'filter')
 
 GZIPPED = {'nextseq': True, 'miseq': False, 'novaseq': True}
 

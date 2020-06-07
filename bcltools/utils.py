@@ -38,6 +38,14 @@ def num2qual(num):
     return qual
 
 
+def filter2num(filter_val):
+    return 1 if filter_val == 'Y' else 0
+
+
+def num2filter(num):
+    return 'Y' if num == 1 else 'N'
+
+
 def clean_pipe(f, **args):
     try:
         for line in f(**args):
