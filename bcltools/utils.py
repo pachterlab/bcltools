@@ -2,6 +2,8 @@ import os
 import sys
 import struct
 
+from .config import TYPE_LEN, CHAR_ORDER
+
 
 def prepend_zeros_to_number(len_name, number):
     len_number = len(str(number))
@@ -96,3 +98,9 @@ def lane2num(lane):
 
 def split_reads(num, div):
     return [num // div + (1 if x < num % div else 0) for x in range(div)]
+
+
+def type_to_num_bytes(s):
+    s_types = ''.join(c for c in s if c not in CHAR_ORDER)
+    s_len = sum([TYPE_LEN.get(i, 0) for i in s_types])
+    return s_len
