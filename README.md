@@ -13,16 +13,16 @@ $ pip install .
 ## Usage - Reading
 ### BCL files
 ```
-$ bcltools read -x nextseq --head examples/bcl.bcl  # read header only
-$ bcltools read -x nextseq examples/bcl.bcl         # read all entries
-$ bcltools read -x nextseq -n 8 examples/bcl.bcl    # read 8 entries
+$ bcltools read -x nextseq --head examples/bcl.bcl     # read header only
+$ bcltools read -x nextseq examples/bcl.bcl            # read all entries
+$ bcltools read -x nextseq examples/bcl.bcl | head -8  # read 8 entries
 ```
 
 ### LOCS files
 ```
-$ bcltools read -x nextseq -f locs --head examples/locs.locs  # read header only
-$ bcltools read -x nextseq -f locs examples/locs.locs         # read all entries
-$ bcltools read -x nextseq -f locs -n 15 examples/locs.locs   # read 15 entries
+$ bcltools read -x nextseq -f locs --head examples/locs.locs      # read header only
+$ bcltools read -x nextseq -f locs examples/locs.locs             # read all entries
+$ bcltools read -x nextseq -f locs examples/locs.locs | head -15  # read 15 entries
 ```
 
 ## Usage - Writing
