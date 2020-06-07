@@ -25,6 +25,13 @@ $ bcltools read -x nextseq -f locs examples/locs.locs             # read all ent
 $ bcltools read -x nextseq -f locs examples/locs.locs | head -15  # read 15 entries
 ```
 
+### FILTER files
+```
+$ bcltools read -x nextseq -f filter --head examples/filter.filter      # read header only
+$ bcltools read -x nextseq -f filter examples/filter.filter             # read all entries
+$ bcltools read -x nextseq -f filter examples/filter.filter | head -12  # read 12 entries
+```
+
 ## Usage - Writing
 ### BCL files
 ```
@@ -36,4 +43,10 @@ $ bcltools read -x miseq out.bcl                        # check that it worked
 ```
 $ echo "12223.44\t2.44334" | bcltools write -x miseq -f locs -o out.locs -  # write an x y value
 $ bcltools read -x miseq -f locs out.locs                                   # check that it worked
+```
+
+### FILTER files
+```
+$ echo "Y\nY\nN\nY" | bcltools write -x nextseq -f filter -o out.filter -  # write a filter value 
+$ bcltools read -x nextseq -f filter out.filter                            # check that it worked
 ```
