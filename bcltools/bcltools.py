@@ -2,13 +2,14 @@ from .BCLFolderStructure import BCLFolderStructure
 from .FASTQFile import FASTQFile
 from .BCLFile import BCLFile
 from .LOCSFile import LOCSFile
-from .utils import binread
+from .utils import (
+    binread, clean_pipe, parse_fastq_header, prepend_zeros_to_number,
+    split_reads
+)
 
 import logging
 import gzip
 from contextlib import ExitStack
-
-from .utils import clean_pipe
 
 logger = logging.getLogger(__name__)
 
@@ -69,24 +70,26 @@ def bclconvert(n_lanes, machine_type, base_path, fastqs):
     logger.info("Counting number of reads")
     n_reads = fastq_objects[0].n_reads()
 
+    reads_per_lane = split_reads(n_reads, n_lanes)
+
     folder_structure = BCLFolderStructure(
-        n_lanes, n_cycles, n_reads, machine_type, base_path
+        n_lanes, n_cycles, reads_per_lane, machine_type, base_path
     )
 
     # initialize the BaseCalls/L00X folders
     logger.info("Initializing BCL Folder structure")
-    lanes = folder_structure.make_base_calls_lane_folders()
+    lanes_bcls = folder_structure.make_base_calls_lane_folders()
+    lanes_locs = folder_structure.make_intensities_lane_folders()
 
-    # initialize the bcl files
-    logger.info("Initializing BCL files")
-    for lane in lanes:
-        folder_structure.initialize_bcl_files(lane)
+    # initialize locs and bcl files
+    # TODO fix the pluralization of words, its confusing
+    logger.info("Initializing LOCS and BCL files")
+    for idx, (lane_locs, lane_bcl) in enumerate(zip(lanes_locs, lanes_bcls)):
+        folder_structure.initialize_locs_files(lane_locs, reads_per_lane[idx])
+        folder_structure.initialize_bcl_files(lane_bcl, reads_per_lane[idx])
 
     # Do the transpose
-
-    # open all files
-
-    logger.info('Writing records to BCL files')
+    logger.info('Writing records to LOCS and BCL files')
 
     seq_bool = False
     qual_bool = False
@@ -98,13 +101,19 @@ def bclconvert(n_lanes, machine_type, base_path, fastqs):
         ]
 
         for idx, lines in enumerate(zip(*infiles), 0):
+            if idx % 1000 == 0:
+                logger.info(f"Wrote {idx//4} reads")
             if idx % 4 == 0:
-                # line = lines[0]
-                # should check that the headers are consistent
-                # h = parse_fastq_header(line.strip().decode())
+                # switch between each lane every iteration
 
-                # x = h['x']
-                # y = h['y']
+                lane = f'L{prepend_zeros_to_number(3, (idx//4)%n_lanes + 1)}'
+
+                line = lines[0]
+                # should check that the headers are consistent
+                h = parse_fastq_header(line.strip().decode())
+
+                x = h['x']
+                y = h['y']
 
                 coord_bool = True
 
@@ -129,11 +138,12 @@ def bclconvert(n_lanes, machine_type, base_path, fastqs):
                 qual = "".join(quals)
 
                 for idx, (b, q) in enumerate(zip(seq, qual)):
-                    folder_structure.bcl_files['L001'][idx].write_record(b, q)
-
-    # write the headers ie number of cycles
-
-    # write the sequences
+                    folder_structure.bcl_files[lane][idx].write_record(
+                        b, q, close=True
+                    )
+                folder_structure.locs_files[lane][0].write_record(
+                    x, y, close=True
+                )
 
     return
 

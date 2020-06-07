@@ -88,3 +88,11 @@ def binread(file, header_fmt, header_len, record_fmt):
 
         for idx, i in enumerate(itr):
             sys.stdout.write(f'{i[0]}\n')
+
+
+def lane2num(lane):
+    return int(lane[1:])
+
+
+def split_reads(num, div):
+    return [num // div + (1 if x < num % div else 0) for x in range(div)]
