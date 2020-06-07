@@ -40,7 +40,12 @@ def num2qual(num):
 
 def clean_pipe(f, **args):
     try:
-        f(**args)
+        for line in f(**args):
+            s = "\t".join(map(str, line))
+
+            sys.stdout.write(s)
+            sys.stdout.write("\n")
+
     except BrokenPipeError:
         # Python flushes standard streams on exit; redirect remaining output
         # to devnull to avoid another BrokenPipeError at shutdown

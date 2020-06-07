@@ -79,7 +79,7 @@ class BCLFolderStructure(object):
         if self.machine_type == 'nextseq':
             path = os.path.join(lane, f's_{lane2num(lane_name)}.locs')
             locs = LOCSFile(path)
-            locs.write_header(n_reads, close=True)  # account for lanes
+            locs.write_header_locs(n_reads)  # account for lanes
             self.locs_files[lane_name].append(locs)
         return
 
@@ -92,8 +92,8 @@ class BCLFolderStructure(object):
                     lane, f'{prepend_zeros_to_number(4, m+1)}.bcl'
                 )
 
-                bcl = BCLFile(path, self.machine_type)
-                bcl.write_header(n_reads, close=True)
+                bcl = BCLFile(path)
+                bcl.write_header_bcl(n_reads)
 
                 self.bcl_files[os.path.basename(lane)].append(bcl)
 

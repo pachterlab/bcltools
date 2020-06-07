@@ -48,14 +48,14 @@ class BinaryFile(object):
         else:
             self.read_header()
 
-        itr = struct.iter.unpack(self.record_fmt, self.file.read())
+        itr = struct.iter_unpack(self.record_fmt, self.file.read())
         for idx, record in enumerate(itr):
             yield record
 
         # this may be unnecessary
         self.close()
 
-    def write_header(self, header_values):
+    def write_header(self, *header_values):
         self.open('wb')
 
         header = struct.pack(self.header_fmt, *header_values)
@@ -64,7 +64,7 @@ class BinaryFile(object):
 
         self.close()
 
-    def change_header(self, header_values):
+    def change_header(self, *header_values):
         self.open('r+b')
 
         header = struct.pack(self.header_fmt, *header_values)
@@ -73,16 +73,19 @@ class BinaryFile(object):
         self.file.write(header)
         self.close()
 
-    def write_record(self, record_values):
+    def write_record(self, *record_values, keep_open=False):
         self.open('ab')
 
         record = struct.pack(self.record_fmt, *record_values)
         self.file.write(record)
+        if not keep_open:
+            return self.close()
+        return
 
     def write_from_stream(self, stream):
         # assume the stream is open already
-        for idx, line in enumerate(stream):
+        for line in stream:
             data = line.strip().split()
-            yield (idx, data)
+            yield data
 
         self.close()

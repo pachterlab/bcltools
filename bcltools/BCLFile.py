@@ -1,63 +1,26 @@
 from .utils import (num2qual, qual2num)
-import struct
-import sys
-# import gzip
-
-from .config import GZIPPED
+from .BinaryFile import BinaryFile
 
 num2base = {0: "A", 1: "C", 2: "G", 3: "T"}
 base2num = {"A": 0, "C": 1, "G": 2, "T": 3}
 
 
-class BCLFile(object):
+class BCLFile(BinaryFile):
 
-    def __init__(self, path, machine_type):
-        self.path = path
-        self.gzipped = GZIPPED.get(machine_type.lower(), False)
+    def __init__(self, path, header_fmt="<I", record_fmt="<B", gzipped=False):
+        super().__init__(path, header_fmt, record_fmt, gzipped=False)
 
-        self.header_fmt = "<i"
-        self.record_fmt = "<B"
-        self.header_len = 4
-
-        self.file = None
-
-    def open(self, mode):
-        # TODO gzip not working
-        # mode for read = 'rb'
-        # mode for write append = 'ab'
-        # mode for seek write = 'r+b'
-        if not self.isopen():
-            self.file = open(
-                self.path, mode
-            )  # if not self.gzipped else gzip.open(self.path, mode)
-        return
-
-    def close(self):
-        return self.file.close()
-
-    def isopen(self):
-        if self.file is None:
-            return False
-        else:
-            return not self.file.closed
-
-    def read_header(self):
+    def read_header_bcl(self):
         """
         # Note: N is the cluster index
         Bytes     | Description         | Data type
         Bytes 0–3 | Number N of cluster | Unsigned 32bits little endian integer
         """
+        # consider returning this as a tuple
+        n_reads = self.read_header()
+        return ((n_reads),)
 
-        self.open('rb')
-
-        up = struct.unpack(self.header_fmt, self.file.read(self.header_len))
-        sys.stdout.write(f'{up[0]}\n')
-
-        self.close()
-
-        return up
-
-    def read_record(self, n_lines=-1, skip_header=True):
+    def read_record_bcl(self, skip_header=True):
         """
         # Byte specification of *.bcl
         # Note: N is the cluster index
@@ -75,74 +38,42 @@ class BCLFile(object):
         #               | ‘0’ in a byte is reserved
         #               | for no-call.
         """
+        for record in self.read_record(skip_header=skip_header):
+            r, = record
 
-        self.open('rb')
-
-        if skip_header:
-            self.file.seek(self.header_len)
-        else:
-            self.read_header()
-
-        itr = struct.iter_unpack(self.record_fmt, self.file.read())
-        # if i[0] is equal to zero then its a no call 'N'
-        for idx, i in enumerate(itr):
-            if idx == n_lines:
-                break
-            base = num2base.get(3 & i[0], 0)
-            num = i[0] >> 2
+            base = num2base.get(3 & r, 0)
+            num = r >> 2
             qual = num2qual(num)
-            sys.stdout.write(f'{base}\t{qual}\n')
 
-        self.close()
+            yield (base, qual)
 
-    def write_header(self, n_reads, close=True):
-        header = struct.pack(self.header_fmt, n_reads)
+    def write_header_bcl(self, n_reads):
+        header_values = (n_reads,)
+        return self.write_header(*header_values)
 
-        self.open('wb')
-        self.file.write(header)
+    def change_header_bcl(self, n_reads):
+        header_values = (n_reads,)
+        return self.change_header(*header_values)
 
-        if close:
-            self.close()
-
-    def change_header(self, n_reads):
-        header = struct.pack(self.header_fmt, n_reads)
-
-        self.open('r+b')
-        # self.file.seek(0)
-        self.file.write(header)
-        self.file.close()
-
-    def write_record(self, base, qual, close=True):
+    def write_record_bcl(self, base, qual, keep_open=False):
         """
         Write a single record containing a quality score and a base, to the bcl file.
         """
-
         r = 0
         if base != "N":
             q = qual2num(qual) << 2
             b = base2num[base]
             r = q | b
-        record = struct.pack(self.record_fmt, r)
+        record_values = (r,)
+        return self.write_record(*record_values, keep_open=keep_open)
 
-        self.open('ab')
-        self.file.write(record)
+    def write_from_stream_bcl(self, infile):
 
-        if close:
-            self.close()
-
-    def write_records(self, infile):
-
-        for idx, line in enumerate(infile, 1):
-            base, qual = line.strip().split()
-            self.write_record(base, qual, close=False)
+        for idx, data in enumerate(self.write_from_stream(infile), 1):
+            base, qual = data
+            self.write_record_bcl(base, qual, keep_open=True)
 
         self.close()
 
         n_reads = idx
-        self.change_header(n_reads)
-
-
-class Machine:
-
-    def __init__(self, machine):
-        pass
+        self.change_header_bcl(n_reads)

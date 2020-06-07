@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def parse_read(args):
 
     if args.f == 'bcl':
-        bclread(args.x, args.file, args.head, args.n)
+        bclread(args.file, args.head, args.n)
     elif args.f == 'bci':
         bciread(args.file)
     elif args.f == 'locs':
@@ -34,7 +34,7 @@ def parse_write(args):
                 sys.exit('Please provide an output file or pipe')
             else:
                 if args.f == 'bcl':
-                    bclwrite(args.o, args.x, args.file)
+                    bclwrite(args.o, args.file)
                 elif args.f == 'locs':
                     locswrite(args.o, args.file)
 

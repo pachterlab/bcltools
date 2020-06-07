@@ -6,6 +6,7 @@ from .utils import (
     binread, clean_pipe, parse_fastq_header, prepend_zeros_to_number,
     split_reads
 )
+# from .config import GZIPPED
 
 import logging
 import gzip
@@ -14,23 +15,41 @@ from contextlib import ExitStack
 logger = logging.getLogger(__name__)
 
 
-def bclwrite(outfile, technology, file):
-    out_bcl = BCLFile(outfile, technology)
-    out_bcl.write_header(0, close=False)
-    out_bcl.write_records(file)
-    file.close()
+def bclwrite(bcl, infile):
+    # gzipped = GZIPPED.get(technology.lower(), False)
+    # gzipped doesnt do anything for now but it should
+    # affect whether the bcl file is gzipped
+    out_bcl = BCLFile(bcl)
+    out_bcl.write_header_bcl(0)
+    out_bcl.write_from_stream_bcl(infile)
+    infile.close()
 
     return
 
 
-def bclread(technology, bcl, head=False, n_lines=-1):
-    bcl = BCLFile(bcl, technology)
+def bclread(bcl, head=False, n_lines=-1):
+    bcl = BCLFile(bcl)
 
     if head:
-        return clean_pipe(bcl.read_header)
-
+        return clean_pipe(bcl.read_header_bcl)
     elif not head:
-        return clean_pipe(bcl.read_record, n_lines=n_lines)
+        return clean_pipe(bcl.read_record_bcl)
+
+
+def locsread(locs, head=False, n_lines=-1):
+    locs_file = LOCSFile(locs)
+
+    if head:
+        clean_pipe(locs_file.read_header_locs)
+    elif not head:
+        clean_pipe(locs_file.read_record_locs)
+
+
+def locswrite(locs, infile):
+    locs = LOCSFile(locs)
+    locs.write_header_locs(0)
+    locs.write_from_stream_locs(infile)
+    infile.close()
     return
 
 
@@ -40,23 +59,6 @@ def bciread(bci):
 
     record_fmt = '<I'
     binread(bci, header_fmt, header_len, record_fmt)
-
-
-def locsread(locs, head=False, n_lines=-1):
-    locs_file = LOCSFile(locs)
-
-    if head:
-        locs_file.read_header()
-    elif not head:
-        locs_file.read_record(n_lines)
-
-
-def locswrite(outfile, file):
-    locs = LOCSFile(outfile)
-    locs.write_header(0, close=False)
-    locs.write_records(file)
-    file.close()
-    return
 
 
 def bclconvert(n_lanes, machine_type, base_path, fastqs):
