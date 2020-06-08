@@ -50,3 +50,9 @@ $ bcltools read -x miseq -f locs out.locs                                   # ch
 $ echo "Y\nY\nN\nY" | bcltools write -x nextseq -f filter -o out.filter -  # write a filter value 
 $ bcltools read -x nextseq -f filter out.filter                            # check that it worked
 ```
+
+## Usage - Piping
+We can chain commands when reading and writing by passing through pipes
+```
+$ bcltools read -f filter -x nextseq examples/filter.filter | head -12 | bcltools write -f filter -x nextseq -o ./smaller.filter -
+```
