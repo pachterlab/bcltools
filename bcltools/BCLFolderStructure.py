@@ -3,8 +3,15 @@ import os
 from .utils import prepend_zeros_to_number
 from .BCLFile import BCLFile
 from .LOCSFile import LOCSFile
-from .utils import lane2num
+from .FILTERFile import FILTERFile
+from .utils import lane2num, parse_fastq_header
 from collections import defaultdict
+import gzip
+
+from contextlib import ExitStack
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BCLFolderStructure(object):
@@ -27,6 +34,7 @@ class BCLFolderStructure(object):
 
         self.bcl_files = defaultdict(list)
         self.locs_files = defaultdict(list)
+        self.filter_files = defaultdict(list)
 
     def base_calls_lane_path(self, lane_number):
         lane = f'L{prepend_zeros_to_number(3, lane_number)}'
@@ -101,3 +109,76 @@ class BCLFolderStructure(object):
             raise Exception('Not implemented yet :(')
 
         return
+
+    def initialize_filter_files(self, lane, n_reads):
+        lane_name = os.path.basename(lane)
+        if self.machine_type == 'nextseq':
+            path = os.path.join(lane, f's_{lane2num(lane_name)}.filter')
+            filter_file = FILTERFile(path)
+            filter_file.write_header_filter(n_reads)  # account for lanes
+            self.filter_files[lane_name].append(filter_file)
+        return
+
+    # Super naive implementation
+    def fastq2bcl(self, fastq_objects, reads_per_lane):
+        seq_bool = False
+        qual_bool = False
+        coord_bool = False
+        with ExitStack() as stack:
+            infiles = [
+                stack.enter_context(gzip.open(fastq.path))
+                for fastq in fastq_objects
+            ]
+            # lane_counter = 0
+            # lane = 'L001'
+            for idx, lines in enumerate(zip(*infiles), 0):
+                if idx % 1000 == 0:
+                    logger.info(f"Wrote {idx//4} reads")
+                if idx % 4 == 0:
+                    # switch between each lane every iteration
+                    # this is fine for now but needs to be changed
+                    lane = f'L{prepend_zeros_to_number(3, (idx//4)%self.n_lanes + 1)}'
+
+                    line = lines[0]
+                    # should check that the headers are consistent
+                    h = parse_fastq_header(line.strip().decode())
+
+                    x = h['x']
+                    y = h['y']
+
+                    pass_filter = h['is_filtered_out']
+
+                    coord_bool = True
+
+                elif (idx - 1) % 4 == 0:
+                    seqs = [seq.strip().decode() for seq in lines]
+                    seq_bool = True
+
+                elif (idx + 1) % 4 == 0:
+                    quals = [qual.strip().decode() for qual in lines]
+                    qual_bool = True
+
+                if seq_bool and qual_bool and coord_bool:
+                    seq_bool = False
+                    qual_bool = False
+                    coord_bool = False
+
+                    # print(x, y)
+                    # print(seqs)
+                    # print(quals)
+
+                    seq = "".join(seqs)
+                    qual = "".join(quals)
+
+                    for jdx, (b, q) in enumerate(zip(seq, qual)):
+                        self.bcl_files[lane][jdx].write_record_bcl(
+                            b, q, keep_open=False
+                        )
+                    self.locs_files[lane][0].write_record_locs(
+                        x, y, keep_open=False
+                    )
+
+                    self.filter_files[lane][0].write_record_filter(
+                        pass_filter, keep_open=False
+                    )
+            logger.info(f"Wrote {idx//4 + 1} reads")

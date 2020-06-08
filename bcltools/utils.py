@@ -38,12 +38,14 @@ def num2qual(num):
     return qual
 
 
-def filter2num(filter_val):
-    return 1 if filter_val == 'Y' else 0
+# the convention is insane for illumina
+# Y means that the read is filtered out
+# N means the read is not filtered out (ie it is kept)
+# in binary, 1 means the read is kept == N
+# in binary, 0 means the read is filtered out == Y
 
-
-def num2filter(num):
-    return 'Y' if num == 1 else 'N'
+filter2num = lambda x: {'N': 1, 'Y': 0}.get(x, None)
+num2filter = lambda x: {1: 'N', 0: 'Y'}.get(x, None)
 
 
 def clean_pipe(f, **args):
@@ -81,7 +83,7 @@ def parse_fastq_header(line):
     h['y'] = int(first[6])
 
     h['read'] = int(second[0])
-    h['is_filtered'] = True if second[1] == 'Y' else False
+    h['is_filtered_out'] = second[1]
     h['control_number'] = int(second[2])
     h['sample_number'] = int(second[3])
 

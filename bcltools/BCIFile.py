@@ -1,55 +1,26 @@
-from .config import GZIPPED
-import gzip
-import struct
-import sys
+from .BinaryFile import BinaryFile
 
 
-class BCIFile(object):
+class BCIFile(BinaryFile):
+    """
+    Bci files contain one record per tile, which uses the following format:
+    bytes 0-3: tile number
+    bytes 4-7: number of clusters in the tile.
+    Cluster numbers of one bci file sum to a cluster number listed in the beginning of each
+    bcl.bgzf file of that lane.
+    """
 
-    def __init__(self, path, machine_type):
-        self.path = path
-        self.gzipped = GZIPPED.get(machine_type.lower(), False)
+    def __init__(self, path, header_fmt="<II", record_fmt="<II", gzipped=False):
+        super().__init__(path, header_fmt, record_fmt, gzipped=False)
 
-        self.header_fmt = "<L"
-        self.record_fmt = "<L"
-        self.header_len = 4
+        self.version_num = 0
 
-    def open_bci_read(self):
-        f = open(self.path,
-                 'rb') if not self.gzipped else gzip.open(self.path, 'rb')
-        return f
+    def read_header_bci(self):
+        version_num, num_tiles = self.read_header()
+        return ((version_num, num_tiles),)
 
-    def open_bci_write(self):
-        f = open(self.path,
-                 'ab') if not self.gzipped else gzip.open(self.path, 'ab')
-        return f
+    def read_record_bci(self, skip_header=True):
+        for record in self.read_record(skip_header=skip_header):
+            tile_num, num_clusters = record
 
-    def read_header(self):
-        f = self.open_bci_read()
-
-        BCI_version = struct.unpack(self.header_fmt, f.read(self.header_len))[0]
-        n_tiles = struct.unpack(self.header_fmt, f.read(self.header_len))[0]
-
-        sys.stdout.write(f'{BCI_version}\t{n_tiles}\n')
-
-        f.close()
-
-    def read_records(self):
-        """
-        Bytes Description
-        Bytes 0–3 The tile number.
-        Bytes 4–7 The number of clusters in the tile.
-        """
-        f = self.open_bci_read()
-
-        BCI_version = struct.unpack(self.header_fmt, f.read(self.header_len))[0]
-        n_tiles = struct.unpack(self.header_fmt, f.read(self.header_len))[0]
-
-        sys.stdout.write(f'{BCI_version}\t{n_tiles}\n')
-
-        itr = struct.iter_unpack(self.record_fmt, f.read())
-
-        for idx, i in enumerate(itr, 1):
-            sys.stdout.write(f'{i[0]}\n')
-
-        f.close()
+            yield (tile_num, num_clusters)

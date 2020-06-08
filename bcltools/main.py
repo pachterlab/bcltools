@@ -3,6 +3,7 @@
 import argparse
 import sys
 import logging
+import os
 
 from .bcltools import (
     bclconvert, bclread, bclwrite, bciread, locsread, locswrite, filterread,
@@ -15,11 +16,14 @@ logger = logging.getLogger(__name__)
 
 
 def parse_read(args):
+    base_name = os.path.basename(args.file)
+    if args.f not in base_name:
+        logger.warning(f'Specified "{args.f}" but reading "{base_name}"')
 
     if args.f == 'bcl':
         bclread(args.file, args.head)
     elif args.f == 'bci':
-        bciread(args.file)
+        bciread(args.file, args.head)
     elif args.f == 'locs':
         locsread(args.file, args.head)
     elif args.f == 'filter':
