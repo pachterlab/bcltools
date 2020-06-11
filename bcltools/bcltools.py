@@ -5,7 +5,7 @@ from .BCIFile import BCIFile
 from .LOCSFile import LOCSFile
 from .FILTERFile import FILTERFile
 from .utils import (clean_pipe, split_reads)
-# from .config import GZIPPED
+from .config import COMPRESSION
 
 import logging
 
@@ -24,8 +24,8 @@ def bclwrite(bcl_path, infile):
     return
 
 
-def bclread(bcl_path, head=False):
-    bcl = BCLFile(bcl_path)
+def bclread(bcl_path, technology, head=False):
+    bcl = BCLFile(bcl_path, compression=COMPRESSION[technology])
 
     if head:
         return clean_pipe(bcl.read_header_bcl)

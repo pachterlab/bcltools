@@ -10,8 +10,10 @@ class FILTERFile(BinaryFile):
     Bytes 12–(N+11) N—cluster number Unsigned 8 bits integer. Bit 0 is pass or failed filter.
     """
 
-    def __init__(self, path, header_fmt="<III", record_fmt="<B", gzipped=False):
-        super().__init__(path, header_fmt, record_fmt, gzipped=False)
+    def __init__(
+        self, path, header_fmt="<III", record_fmt="<B", compression=None
+    ):
+        super().__init__(path, header_fmt, record_fmt, compression=None)
 
         self.magic_num = 0
         self.version_num = 3

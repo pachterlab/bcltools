@@ -10,8 +10,10 @@ class BCIFile(BinaryFile):
     bcl.bgzf file of that lane.
     """
 
-    def __init__(self, path, header_fmt="<II", record_fmt="<II", gzipped=False):
-        super().__init__(path, header_fmt, record_fmt, gzipped=False)
+    def __init__(
+        self, path, header_fmt="<II", record_fmt="<II", compression=None
+    ):
+        super().__init__(path, header_fmt, record_fmt, compression=None)
 
         self.version_num = 0
 

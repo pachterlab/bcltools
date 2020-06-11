@@ -6,7 +6,7 @@ MACHINE_TYPES = (
 
 FILE_TYPES = ('bcl', 'bci', 'locs', 'filter')
 
-GZIPPED = {'nextseq': True, 'miseq': False, 'novaseq': True}
+COMPRESSION = {'nextseq': 'bgzip', 'miseq': None, 'novaseq': None}
 
 TYPE_LEN = {
     'c': 1,  # char

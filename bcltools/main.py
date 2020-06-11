@@ -21,7 +21,7 @@ def parse_read(args):
         logger.warning(f'Specified "{args.f}" but reading "{base_name}"')
 
     if args.f == 'bcl':
-        bclread(args.file, args.head)
+        bclread(args.file, args.x, args.head)
     elif args.f == 'bci':
         bciread(args.file, args.head)
     elif args.f == 'locs':

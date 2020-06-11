@@ -172,13 +172,13 @@ class BCLFolderStructure(object):
 
                     for jdx, (b, q) in enumerate(zip(seq, qual)):
                         self.bcl_files[lane][jdx].write_record_bcl(
-                            b, q, keep_open=False
+                            b, q, keep_open=True
                         )
                     self.locs_files[lane][0].write_record_locs(
-                        x, y, keep_open=False
+                        x, y, keep_open=True
                     )
 
                     self.filter_files[lane][0].write_record_filter(
-                        pass_filter, keep_open=False
+                        pass_filter, keep_open=True
                     )
             logger.info(f"Wrote {idx//4 + 1} reads")

@@ -1,11 +1,14 @@
 import struct
 
 from .utils import type_to_num_bytes
+# import gzip
+
+compression = (None, 'gzip', 'bgzip')
 
 
 class BinaryFile(object):
 
-    def __init__(self, path, header_fmt, record_fmt, gzipped=False):
+    def __init__(self, path, header_fmt, record_fmt, compression=None):
         self.path = path
         self.header_fmt = header_fmt
         self.record_fmt = record_fmt
@@ -13,7 +16,7 @@ class BinaryFile(object):
         self.header_len = type_to_num_bytes(self.header_fmt)
         self.record_len = type_to_num_bytes(self.record_fmt)
 
-        self.gzipped = gzipped
+        self.compression = compression
 
         self.file = None
 
@@ -25,8 +28,21 @@ class BinaryFile(object):
 
     def open(self, mode):
         # read = 'rb', write append = 'ab', seek write = 'r+b'
+        write = True if '+' in mode or 'w' in mode or 'a' in mode else False
         if not self.isopen():
-            self.file = open(self.path, mode)
+            if self.compression is None:
+                self.file = open(self.path, mode)
+            elif self.compression == 'gzip':
+                # TODO fix this
+                # self.file = gzip.open(self.path, mode)
+                self.file = open(self.path, mode)
+            elif self.compression == 'bgzip':
+                if write:
+                    self.file = open(self.path, mode)
+                else:
+                    # TODO fix this
+                    # self.file = gzip.open(self.path, mode)
+                    self.file = open(self.path, mode)
         return
 
     def close(self):

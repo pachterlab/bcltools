@@ -15,9 +15,9 @@ class LOCSFile(BinaryFile):
     """
 
     def __init__(
-        self, path, header_fmt="<IfL", record_fmt="<ff", gzipped=False
+        self, path, header_fmt="<IfL", record_fmt="<ff", compression=None
     ):
-        super().__init__(path, header_fmt, record_fmt, gzipped=False)
+        super().__init__(path, header_fmt, record_fmt, compression=None)
 
         self.version_num = 1
         self.magic_num = 1.0
