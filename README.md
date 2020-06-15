@@ -1,6 +1,8 @@
 # bcltools
 ![github version](https://img.shields.io/badge/Version-0.0.1-informational)
 
+*NB* This code is *very* ugly and was developed to figure out the behavior of illumina's bcl2fastq program for barcodes that collide. 
+
 bcltools are a set of tools for manipulating, reading, files associated with illumina short read sequencers.
 
 ## Installation
