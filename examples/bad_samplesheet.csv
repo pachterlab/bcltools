@@ -1,0 +1,16 @@
+IEMFileVersion,5,,,,,
+Investigator Name,Pachter,,,,,
+Experiment Name,BAD_BCL2FASTQ,,,,,
+Date,20200420,,,,,
+Workflow,GenerateFASTQ,,,,,
+Application,FASTQ Only,,,,,
+Instrument Type,MiSeq,,,,,
+Chemistry,Amplicon,,,,,
+[Reads],,,,,,
+26,,,,,,
+[Settings],,,,,,
+,,,,,,
+[Data],,,,,,
+Plate_ID,index2,nCoV_amplicon,bc_set,Sample_Well,index,Sample_ID
+Plate1,AAAAAACC,S2,N1_S2_RPP30,A01,AAAAAAAA,Plate1-A01
+Plate1,AAAAAAAA,S2,N1_S2_RPP30,A02,AAAAAAAA,Plate1-A02

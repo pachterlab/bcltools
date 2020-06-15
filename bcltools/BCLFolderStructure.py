@@ -13,6 +13,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# for miseq, each tile gets a locs file which has number of reads length
+# there are 14 tiles for 11XX
+# there are 14 tiles for 21XX
+# both start at 01-14
+# the locs files are in the intensities folder
+# Data/Intensities/L00X/s_LANEX_TILE.locs
+
 
 class BCLFolderStructure(object):
 
@@ -29,12 +36,43 @@ class BCLFolderStructure(object):
         self.machine_type = machine_type
         self.base_path = base_path
 
+        self.tiles = [
+            1101,
+            1102,
+            1103,
+            1104,
+            1105,
+            1106,
+            1107,
+            1108,
+            1109,
+            1110,
+            1111,
+            1112,
+            1113,
+            1114,
+            2101,
+            2102,
+            2103,
+            2104,
+            2105,
+            2106,
+            2107,
+            2108,
+            2109,
+            2110,
+            2111,
+            2112,
+            2113,
+            2114,
+        ]
+
         self.intensities_path = os.path.join(self.base_path, intensities_path)
         self.base_calls_path = os.path.join(self.base_path, base_calls_path)
 
-        self.bcl_files = defaultdict(list)
-        self.locs_files = defaultdict(list)
-        self.filter_files = defaultdict(list)
+        self.bcl_files = defaultdict(lambda: defaultdict(list))
+        self.locs_files = defaultdict(lambda: defaultdict(list))
+        self.filter_files = defaultdict(lambda: defaultdict(list))
 
     def base_calls_lane_path(self, lane_number):
         lane = f'L{prepend_zeros_to_number(3, lane_number)}'
@@ -58,13 +96,11 @@ class BCLFolderStructure(object):
 
         elif self.machine_type == "miseq":
             for n in range(self.n_lanes):
-                for m in range(self.n_cycles):
-                    L = os.path.join(
-                        base_path, f"L{prepend_zeros_to_number(3, n+1)}",
-                        f"C{m+1}.1"
-                    )
-                    os.makedirs(L)
-                    lanes.append(L)
+                L = os.path.join(
+                    base_path, f"L{prepend_zeros_to_number(3, n+1)}"
+                )
+                os.makedirs(L)
+                lanes.append(L)
 
         elif self.machine_type == "novaseq":
             raise Exception("Novaseq is not supported yet.")
@@ -89,10 +125,19 @@ class BCLFolderStructure(object):
             locs = LOCSFile(path)
             locs.write_header_locs(n_reads)  # account for lanes
             self.locs_files[lane_name].append(locs)
+        elif self.machine_type == 'miseq':
+            for tidx, tile in enumerate(self.tiles):
+                path = os.path.join(
+                    lane, f's_{lane2num(lane_name)}_{tile}.locs'
+                )
+                locs = LOCSFile(path)
+                locs.write_header_locs(n_reads[tidx])  # account for lanes
+                self.locs_files[lane_name][tile].append(locs)
         return
 
     def initialize_bcl_files(self, lane, n_reads):
         # perform action for one lane at a time
+        lane_name = os.path.basename(lane)
         if self.machine_type == 'nextseq':
             # need to fix gz
             for m in range(self.n_cycles):
@@ -103,10 +148,20 @@ class BCLFolderStructure(object):
                 bcl = BCLFile(path)
                 bcl.write_header_bcl(n_reads)
 
-                self.bcl_files[os.path.basename(lane)].append(bcl)
+                self.bcl_files[lane_name].append(bcl)
 
         if self.machine_type == 'miseq':
-            raise Exception('Not implemented yet :(')
+            for m in range(self.n_cycles):
+                path = os.path.join(lane, f"C{m+1}.1")
+                os.makedirs(path)
+                for tidx, tile in enumerate(self.tiles):
+                    file_path = os.path.join(
+                        path, f's_{lane2num(lane_name)}_{tile}.bcl'
+                    )
+
+                    bcl = BCLFile(file_path)
+                    bcl.write_header_bcl(n_reads[tidx])
+                    self.bcl_files[lane_name][tile].append(bcl)
 
         return
 
@@ -117,6 +172,16 @@ class BCLFolderStructure(object):
             filter_file = FILTERFile(path)
             filter_file.write_header_filter(n_reads)  # account for lanes
             self.filter_files[lane_name].append(filter_file)
+        elif self.machine_type == 'miseq':
+            for tidx, tile in enumerate(self.tiles):
+                path = os.path.join(
+                    lane, f's_{lane2num(lane_name)}_{tile}.filter'
+                )
+                filter_file = FILTERFile(path)
+                filter_file.write_header_filter(
+                    n_reads[tidx]
+                )  # account for lanes
+                self.filter_files[lane_name][tile].append(filter_file)
         return
 
     # Super naive implementation
@@ -124,6 +189,12 @@ class BCLFolderStructure(object):
         seq_bool = False
         qual_bool = False
         coord_bool = False
+
+        tile_num_idx = 0
+        num_passed = 0
+        tile = self.tiles[tile_num_idx]
+
+        lane = 'L001'
         with ExitStack() as stack:
             infiles = [
                 stack.enter_context(gzip.open(fastq.path))
@@ -135,9 +206,17 @@ class BCLFolderStructure(object):
                 if idx % 1000 == 0:
                     logger.info(f"Wrote {idx//4} reads")
                 if idx % 4 == 0:
+                    num_reads = idx // 4
+
                     # switch between each lane every iteration
                     # this is fine for now but needs to be changed
-                    lane = f'L{prepend_zeros_to_number(3, (idx//4)%self.n_lanes + 1)}'
+                    # lane = f'L{prepend_zeros_to_number(3, (idx//4)%self.n_lanes + 1)}'
+                    if num_passed % reads_per_lane[tile_num_idx
+                                                   ] == 0 and num_reads > 0:
+                        num_passed = 0
+                        tile_num_idx += 1
+                        tile = self.tiles[tile_num_idx]
+                    num_passed += 1
 
                     line = lines[0]
                     # should check that the headers are consistent
@@ -171,14 +250,15 @@ class BCLFolderStructure(object):
                     qual = "".join(quals)
 
                     for jdx, (b, q) in enumerate(zip(seq, qual)):
-                        self.bcl_files[lane][jdx].write_record_bcl(
-                            b, q, keep_open=True
+                        # fix the tile, iterate through the cycles
+                        self.bcl_files[lane][tile][jdx].write_record_bcl(
+                            b, q, keep_open=False
                         )
-                    self.locs_files[lane][0].write_record_locs(
+                    self.locs_files[lane][tile][0].write_record_locs(
                         x, y, keep_open=True
                     )
 
-                    self.filter_files[lane][0].write_record_filter(
+                    self.filter_files[lane][tile][0].write_record_filter(
                         pass_filter, keep_open=True
                     )
             logger.info(f"Wrote {idx//4 + 1} reads")

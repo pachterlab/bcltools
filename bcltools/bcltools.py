@@ -7,6 +7,7 @@ from .FILTERFile import FILTERFile
 from .utils import (clean_pipe, split_reads)
 from .config import COMPRESSION
 
+from collections import defaultdict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,12 @@ def bclconvert(n_lanes, machine_type, base_path, fastqs):
     n_reads = fastq_objects[0].n_reads()
 
     reads_per_lane = split_reads(n_reads, n_lanes)
+    n_tiles = 28
+    reads_per_tile = defaultdict(list)
+
+    for lane, rpl in enumerate(reads_per_lane, 1):
+        rpt = split_reads(rpl, n_tiles)
+        reads_per_tile[lane] = rpt
 
     folder_structure = BCLFolderStructure(
         n_lanes, n_cycles, reads_per_lane, machine_type, base_path
@@ -103,14 +110,31 @@ def bclconvert(n_lanes, machine_type, base_path, fastqs):
     # TODO fix the pluralization of words, its confusing
     logger.info("Initializing LOCS and BCL files")
     for idx, (lane_locs, lane_bcl) in enumerate(zip(lanes_locs, lanes_bcls)):
-        folder_structure.initialize_locs_files(lane_locs, reads_per_lane[idx])
-        folder_structure.initialize_bcl_files(lane_bcl, reads_per_lane[idx])
-        # filter is in same folder as bcl
-        folder_structure.initialize_filter_files(lane_bcl, reads_per_lane[idx])
-
+        if machine_type == 'nextseq':
+            folder_structure.initialize_locs_files(
+                lane_locs, reads_per_lane[idx]
+            )
+            folder_structure.initialize_bcl_files(lane_bcl, reads_per_lane[idx])
+            # filter is in same folder as bcl
+            folder_structure.initialize_filter_files(
+                lane_bcl, reads_per_lane[idx]
+            )
+        elif machine_type == 'miseq':
+            folder_structure.initialize_locs_files(
+                lane_locs, reads_per_tile[idx + 1]
+            )
+            folder_structure.initialize_bcl_files(
+                lane_bcl, reads_per_tile[idx + 1]
+            )
+            # filter is in same folder as bcl
+            folder_structure.initialize_filter_files(
+                lane_bcl, reads_per_tile[idx + 1]
+            )
     # Do the transpose
     logger.info('Writing records to LOCS and BCL files')
-
-    folder_structure.fastq2bcl(fastq_objects, reads_per_lane)
+    # print(folder_structure.bcl_files)]
+    print(len(reads_per_tile[1]))
+    print(reads_per_tile[1])
+    folder_structure.fastq2bcl(fastq_objects, reads_per_tile[1])
 
     return

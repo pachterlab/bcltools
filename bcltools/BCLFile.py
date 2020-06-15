@@ -7,8 +7,10 @@ base2num = {"A": 0, "C": 1, "G": 2, "T": 3}
 
 class BCLFile(BinaryFile):
 
-    def __init__(self, path, header_fmt="<I", record_fmt="<B", gzipped=False):
-        super().__init__(path, header_fmt, record_fmt, gzipped=False)
+    def __init__(
+        self, path, header_fmt="<I", record_fmt="<B", compression=None
+    ):
+        super().__init__(path, header_fmt, record_fmt, compression=compression)
 
     def read_header_bcl(self):
         """
